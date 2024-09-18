@@ -61,7 +61,7 @@ def create_window():
 
     draw_graph()  # Dibuja el grafo inicialmente
 
-    dpg.create_viewport(title='Simulación Virus', width=800, height=800)
+    dpg.create_viewport(title='Virus Simulator', width=800, height=800)
     dpg.setup_dearpygui()
     dpg.show_viewport()
     dpg.start_dearpygui()
