@@ -15,7 +15,7 @@ Este proyecto tiene como objetivo simular la propagación de un virus a través 
 ### Requisitos
 
 - **Python 3+**
-- Librerías iniciales necesarias:
+- Librerías iniciales:
   - `DearPyGUI`
   - `pandas`
   - `networkx`
