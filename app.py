@@ -1,7 +1,11 @@
 import gui.graph as graph
+import gui.subgraph as subgraph
+
+
 
 def main():
-    graph.create_window()
+    subgraph.create_window()
+
 
 if __name__ == "__main__":
     main()
