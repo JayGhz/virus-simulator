@@ -7,7 +7,7 @@ infected_nodes = set()
 
 # Leer el archivo CSV personalizado y generar el grafo
 def load_graph_from_custom_csv(file_path):
-    df = pd.read_csv(file_path, index_col=0,sep=',', on_bad_lines='skip', nrows=20, usecols=range(10))  # Leer el archivo CSV y omitir la primera columna que es el índice
+    df = pd.read_csv(file_path, index_col=0, sep=',', on_bad_lines='skip', nrows=10, usecols=range(10))  # Leer el archivo CSV sin omitir filas
     G = nx.Graph()
 
     # Iterar sobre cada fila y agregar las conexiones
@@ -16,6 +16,7 @@ def load_graph_from_custom_csv(file_path):
             G.add_edge(node, int(target))  # Agregar una arista entre 'node' y cada 'target'
 
     return G
+
 
 # Función para dibujar el grafo en DearPyGUI
 def draw_graph():
@@ -66,4 +67,3 @@ def create_window():
     dpg.show_viewport()
     dpg.start_dearpygui()
     dpg.destroy_context()
-

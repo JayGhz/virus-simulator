@@ -12,13 +12,13 @@ for node, target in edges:
         connections_dict[node] = []
     connections_dict[node].append(target)
 
-# Limitar la cantidad de datos para pruebas (puedes eliminar este limitador luego)
-limiter = list(connections_dict.items())[:100]
+# Limitar la cantidad de datos para pruebas 
+limiter = list(connections_dict.items())[:1500]
 
 # Encuentra la máxima cantidad de conexiones (targets) para un nodo para definir cuántas columnas tendrá cada fila
 max_targets = max(len(target_list) for _, target_list in limiter)
 
-# Guarda en un archivo CSV con targets como columnas separadas
+# Guardar en un archivo CSV con targets como columnas separadas
 with open('output/data/facebook_connections.csv', 'w', newline='') as f:
     writer = csv.writer(f, delimiter=',', quoting=csv.QUOTE_MINIMAL, escapechar='\\')
 
