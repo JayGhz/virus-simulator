@@ -12,7 +12,7 @@ node_ids = {}
 def load_graph_from_custom_csv(file_path):
     # Intentar leer el archivo ignorando filas problemáticas usando on_bad_lines
     try:
-        df = pd.read_csv(file_path, index_col=0, header=None, on_bad_lines='skip', usecols=range(10), nrows=10)
+        df = pd.read_csv(file_path, index_col=0, header=None, on_bad_lines='skip')
     except Exception as e:
         print(f"Error al leer el archivo CSV: {e}")
         return None
@@ -67,7 +67,7 @@ def update_infected_nodes(G, node_positions):
             # Dibujar el nodo actualizado (infectado)
             node_ids[node] = dpg.draw_circle((x + 400, y + 400), 10, color=color, parent="canvas", fill=color)
 
-# Propagar infección con probabilidades (esto se hace paso a paso, y la infección se propaga por todo el grafo)
+# Propagar infección con probabilidades
 def propagate_infection(G, infected_nodes):
     new_infected = set()  # Nuevos nodos infectados en cada paso
     nodes_to_infect = deque(infected_nodes)  # Usamos una cola para BFS (propagación en cascada)
@@ -78,7 +78,6 @@ def propagate_infection(G, infected_nodes):
     # Mientras haya nodos infectados por procesar
     while nodes_to_infect:
         node = nodes_to_infect.popleft()
-        print(f"Procesando nodo: {node}, vecinos: {list(G.neighbors(node))}")  # Diagnóstico de vecinos
 
         # Propagar infección a los vecinos del nodo actual
         for neighbor in G.neighbors(node):
@@ -100,7 +99,7 @@ def propagate_infection(G, infected_nodes):
 # Función para iniciar la simulación (sin necesidad de un botón)
 def start_simulation():
     global infected_nodes
-    infected_nodes = {0}  # Empezamos con el nodo 2 como infectado
+    infected_nodes = {1}  # Empezamos con el nodo 2 como infectado
 
     # Cargamos el grafo una sola vez
     G = load_graph_from_custom_csv('output/data/facebook_connections.csv')
