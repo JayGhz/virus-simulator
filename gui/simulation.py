@@ -5,12 +5,11 @@ import random
 import threading
 from collections import deque
 
-# Este conjunto de nodos infectados se mantendrá durante toda la simulación
 infected_nodes = set()
 node_ids = {}
+node_positions = {}
 
 def load_graph_from_custom_csv(file_path):
-    # Intentar leer el archivo ignorando filas problemáticas usando on_bad_lines
     try:
         df = pd.read_csv(file_path, index_col=0, header=None, on_bad_lines='skip')
     except Exception as e:
@@ -18,10 +17,8 @@ def load_graph_from_custom_csv(file_path):
         return None
 
     G = nx.Graph()
-
-    # Iteramos sobre cada fila, donde el índice es el nodo principal y las columnas son los vecinos
     for node, connections in df.iterrows():
-        for target in connections.dropna():  # Ignorar valores NaN
+        for target in connections.dropna():
             try:
                 G.add_edge(int(node), int(target), weight=random.random())
             except ValueError:
@@ -29,106 +26,95 @@ def load_graph_from_custom_csv(file_path):
     
     return G
 
-
-# Función para dibujar el grafo completo (nodos y aristas)
 def draw_graph(G):
     layout = nx.spring_layout(G, k=0.25, scale=1.0)
-
-    # Guardar las posiciones de los nodos para mantenerlas constantes
+    global node_positions
     node_positions = {node: (x * 300, y * 300) for node, (x, y) in layout.items()}
 
-    # Dibujar las aristas solo una vez al inicio
+    offset_x, offset_y = 600, 400  # Ajuste de posición (horizontal, vertical)
+
+    # Dibuja las aristas
     for edge in G.edges:
         x1, y1 = node_positions[edge[0]]
         x2, y2 = node_positions[edge[1]]
-        dpg.draw_line((x1 + 400, y1 + 400), (x2 + 400, y2 + 400), color=(200, 200, 200), parent="canvas")
+        dpg.draw_line((x1 + offset_x, y1 + offset_y), (x2 + offset_x, y2 + offset_y), color=(250, 250, 250), parent="canvas")
 
-    # Dibujar los nodos con un color verde inicial
+    # Dibuja los nodos con borde
     for node in G.nodes:
         x, y = node_positions[node]
-        color = (0, 255, 0)  # Verde para los nodos no infectados
-        node_id = dpg.draw_circle((x + 400, y + 400), 10, color=color, parent="canvas", fill=color)
-        node_ids[node] = node_id  # Guardamos la referencia del nodo
+        color = (60, 219, 65)
+        border_color = (250, 250, 250)  # Color del borde (igual que las aristas)
+        
+        # Dibuja el borde primero (un círculo más grande)
+        dpg.draw_circle((x + offset_x, y + offset_y), 12, color=border_color, parent="canvas")
+        # Dibuja el nodo relleno
+        node_id = dpg.draw_circle((x + offset_x, y + offset_y), 10, color=color, parent="canvas", fill=color)
+        node_ids[node] = node_id
 
-    return node_positions  # Devolvemos las posiciones para usarlas más tarde
-
-# Función para actualizar solo los nodos infectados
-def update_infected_nodes(G, node_positions):
-    for node in G.nodes:
+def update_infected_nodes(G):
+    for node in infected_nodes:
         x, y = node_positions[node]
-        color = (255, 0, 0) if node in infected_nodes else (0, 255, 0)  # Rojo para infectados, verde para no infectados
+        if node in node_ids:
+            dpg.delete_item(node_ids[node])
+            # Dibuja el nodo infectado con borde
+            node_ids[node] = dpg.draw_circle((x + 600, y + 400), 12, color=(150, 150, 150), parent="canvas")  # Borde
+            node_ids[node] = dpg.draw_circle((x + 600, y + 400), 10, color=(190, 25, 25), parent="canvas", fill=(190, 25, 25))  # Nodo infectado
 
-        # Solo actualizamos los nodos infectados
-        if node in infected_nodes:
-            if node in node_ids:
-                # Borramos el nodo anterior si existe y lo redibujamos
-                dpg.delete_item(node_ids[node])
+    dpg.set_value("infected_count", f"Nodos infectados: {len(infected_nodes)}")
+    dpg.set_value("healthy_count", f"Nodos sanos: {len(G.nodes) - len(infected_nodes)}")
 
-            # Dibujar el nodo actualizado (infectado)
-            node_ids[node] = dpg.draw_circle((x + 400, y + 400), 10, color=color, parent="canvas", fill=color)
 
-# Propagar infección con probabilidades
-def propagate_infection(G, infected_nodes):
-    new_infected = set()  # Nuevos nodos infectados en cada paso
-    nodes_to_infect = deque(infected_nodes)  # Usamos una cola para BFS (propagación en cascada)
-
-    # Probabilidad mínima de contagio
+def propagate_infection(G):
+    new_infected = set()
+    nodes_to_infect = deque(infected_nodes)
     min_probability = 0.1
 
-    # Mientras haya nodos infectados por procesar
     while nodes_to_infect:
         node = nodes_to_infect.popleft()
-
-        # Propagar infección a los vecinos del nodo actual
         for neighbor in G.neighbors(node):
-            # Aseguramos que no se infecten nodos ya infectados
             if neighbor not in infected_nodes and neighbor not in new_infected:
                 weight = G[node][neighbor]["weight"]
-                infection_probability = max(weight, min_probability)  # Usamos la mayor de las dos probabilidades
-
-                if random.random() < infection_probability:  # Si pasa la probabilidad, el vecino se infecta
+                infection_probability = max(weight, min_probability)
+                if random.random() < infection_probability:
                     new_infected.add(neighbor)
-                    nodes_to_infect.append(neighbor)  # Agregamos al vecino a la cola para que se propague
+                    nodes_to_infect.append(neighbor)
+                    print(f"Nodo infectado: {neighbor}")
 
-    # Actualizamos los nodos infectados solo con los nuevos infectados
     infected_nodes.update(new_infected)
-    print(f"Nuevos infectados: {new_infected}")
-    
-    return bool(new_infected)  # Devuelve True si hubo nuevos infectados, False si no
+    return bool(new_infected)
 
-# Función para iniciar la simulación (sin necesidad de un botón)
-def start_simulation():
-    global infected_nodes
-    infected_nodes = {1}  # Empezamos con el nodo 2 como infectado
+def start_simulation(G):
+    infected_nodes.clear()
+    infected_nodes.add(1)
+    print("Paciente cero es el nodo: 1")
 
-    # Cargamos el grafo una sola vez
-    G = load_graph_from_custom_csv('output/data/facebook_connections.csv')
-
-    # Dibuja el grafo solo al principio y obtiene las posiciones
-    node_positions = draw_graph(G)
-
-    # Función para avanzar un paso en la simulación
     def run_step():
-        nonlocal G, node_positions
-        if propagate_infection(G, infected_nodes):  # Solo continuar si hay nuevos infectados
-            update_infected_nodes(G, node_positions)  # Solo actualizar los nodos infectados
-            threading.Timer(1.0, run_step).start()  # Llamar a run_step después de 1 segundo (1000 ms)
+        if propagate_infection(G):
+            update_infected_nodes(G)
+            threading.Timer(1.0, run_step).start()
 
-    run_step()  # Comienza la propagación
+    run_step()
 
-# Función para ejecutar DearPyGUI
 def run_dearpygui():
     dpg.create_context()
 
-    # Ventana principal sin botón, la simulación inicia automáticamente
-    with dpg.window(label="Simulación de Propagación de Virus", width=800, height=800):
-        dpg.add_drawlist(width=800, height=800, tag="canvas")
+    with dpg.window(label="Simulación de Propagación de Virus", width=1200, height=800):
+        dpg.add_text("Nodos infectados: 0", tag="infected_count")
+        dpg.add_text("Nodos sanos: 4000", tag="healthy_count")
+        dpg.add_button(label="Iniciar Simulación", callback=lambda: start_simulation(G))
+        dpg.add_spacer(height=10)
+        
+        # Canvas para el grafo, ocupando el espacio completo a la derecha
+        dpg.add_drawlist(width=1000, height=900, tag="canvas")
 
-    # Inicia la simulación automáticamente al abrir la ventana
-    start_simulation()
-
-    dpg.create_viewport(title='Virus Simulator', width=800, height=800)
+    dpg.create_viewport(title='Virus Simulator', width=1200, height=800)
     dpg.setup_dearpygui()
     dpg.show_viewport()
+
+    global G
+    G = load_graph_from_custom_csv('output/data/facebook_connections.csv')
+    draw_graph(G)  # Dibuja el grafo al abrir la ventana
+
     dpg.start_dearpygui()
     dpg.destroy_context()
+
