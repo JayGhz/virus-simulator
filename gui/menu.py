@@ -2,22 +2,28 @@ import tkinter as tk
 import threading
 import cv2
 import gui.simulation as sim
+import gui.key_nodes as kn
 from tkinter import messagebox
 from PIL import Image, ImageTk
 from gui.import_func import importar_csv
 
-def run_dearpygui():
+def run_dearpygui_sim():
     sim.run_dearpygui()
+
+def run_dearpygui_key_nodes():
+    kn.run_dearpygui()
 
 # Funciones para las acciones del menú
 def iniciar_simulacion():
     print("Iniciando simulación...")
-    thread = threading.Thread(target=run_dearpygui)
+    thread = threading.Thread(target=run_dearpygui_sim)
     thread.start()
 
 def ver_grafo():
-    print("Visualizando grafo...")
-    messagebox.showinfo("Grafo", "Mostrando el grafo de la persona")
+    print("Visualizando nodos clave...")
+    thread = threading.Thread(target=run_dearpygui_key_nodes)
+    thread.start()
+
 
 def generar_reportes():
     print("Generando reportes...")
@@ -89,8 +95,8 @@ def actualizar_menu():
     start_button.pack(pady=10)
     start_button.config(highlightbackground="#5d6d7e", highlightthickness=2)
 
-    # Botón para ver grafo
-    graph_button = tk.Button(frame, text="Ver Grafo", width=25, height=2, bg="#5d6d7e", fg="white", font=("Segoe UI", 12), relief="flat", bd=2, command=ver_grafo)
+    # Botón para ver los nodos clave
+    graph_button = tk.Button(frame, text="Nodos clave", width=25, height=2, bg="#5d6d7e", fg="white", font=("Segoe UI", 12), relief="flat", bd=2, command=ver_grafo)
     graph_button.pack(pady=10)
     graph_button.config(highlightbackground="#5d6d7e", highlightthickness=2)
 
