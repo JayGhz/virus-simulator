@@ -8,9 +8,8 @@ key_node = None
 subgraph_nodes = set()
 node_ids = {}
 node_positions = {}
-key_nodes = []  # Lista de nodos clave
-current_index = 0  # Índice actual de nodo clave
-
+key_nodes = []  
+current_index = 0 
 # Cargar el grafo desde un archivo CSV
 def load_graph_from_custom_csv(file_path):
     try:
