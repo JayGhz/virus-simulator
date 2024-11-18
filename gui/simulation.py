@@ -24,7 +24,7 @@ def load_graph_from_custom_csv(file_path):
         for target in connections:
             try:
                 target = int(target)
-                G.add_edge(node, target)
+                G.add_edge(node, target, weight=random.random())
             except ValueError:
                 print(f"Advertencia: Nodo inválido '{target}' en fila {node}, ignorando esta conexión.")
     return G
