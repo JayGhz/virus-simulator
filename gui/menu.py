@@ -7,82 +7,75 @@ from tkinter import messagebox
 from PIL import Image, ImageTk
 from gui.import_func import importar_csv
 
+# Función para ejecutar la simulación atraves de DearPyGUI con multihilos
 def run_dearpygui_sim():
     sim.run_dearpygui()
 
+# Funcion para crear la ventana atraves de DearPyGUI con multihilos
 def run_dearpygui_key_nodes():
     kn.run_dearpygui()
 
-# Funciones para las acciones del menú
+# Función para iniciar la simulación
 def iniciar_simulacion():
     print("Iniciando simulación...")
     thread = threading.Thread(target=run_dearpygui_sim)
     thread.start()
 
+# Función para visualizar los nodos clave
 def ver_grafo():
     print("Visualizando nodos clave...")
     thread = threading.Thread(target=run_dearpygui_key_nodes)
     thread.start()
 
-
+# Función para generar reportes
 def generar_reportes():
     print("Generando reportes...")
     messagebox.showinfo("Reportes", "Reportes generados")
 
+# Función para importar CSV
 def importar_csv_opcion():
-    # Pasar el frame y la función de volver para actualizar la vista con los botones de importación CSV
     importar_csv(frame, volver_al_menu_principal)
 
-# Función para actualizar el fondo del video
 def update_video_frame():
     ret, frame = cap.read()
     if ret:
-        # Convertir el frame a una imagen compatible con Tkinter
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(frame)
+        frame_resized = cv2.resize(frame, (canvas.winfo_width(), canvas.winfo_height()))
+
+        frame_rgb = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+        
+        img = Image.fromarray(frame_rgb)
+        
         img_tk = ImageTk.PhotoImage(img)
         
-        # Actualizar la imagen en el fondo del canvas
         canvas.create_image(0, 0, image=img_tk, anchor="nw")
-        canvas.img_tk = img_tk  # Mantener una referencia a la imagen
+        canvas.img_tk = img_tk  
 
-    # Llamar a esta función nuevamente en 10ms
     canvas.after(10, update_video_frame)
 
-# Crear la ventana principal del menú
 def crear_menu():
-    # Crear ventana principal
     root = tk.Tk()
     root.title("Simulación de Propagación de Virus")
-    root.geometry("800x600")  # Tamaño de la ventana
-    root.config(bg="#34495e")  # Fondo gris oscuro elegante
+    root.geometry("800x600")  
+    root.config(bg="#34495e")  #
 
-    # Crear un canvas para mostrar el fondo de video
     global canvas
     canvas = tk.Canvas(root, width=800, height=600)
     canvas.pack(fill="both", expand=True)
 
-    # Cargar el video
     global cap
     cap = cv2.VideoCapture("assets/background.mp4") 
 
-    # Comenzar a actualizar el video en el fondo
     update_video_frame()
 
-    # Crear un Frame para los botones, para que estén centrados
     global frame
-    frame = tk.Frame(root, bg="#34495e", bd=10)  # Se eliminó el borde extra
+    frame = tk.Frame(root, bg="#34495e", bd=10)  
     frame.place(relx=0.5, rely=0.5, anchor="center", width=400, height=450) 
 
-    # Llamar a la función para crear los botones del menú
     actualizar_menu()
 
-    # Iniciar el loop de la interfaz gráfica
     root.mainloop()
 
-# Función para actualizar el menú
 def actualizar_menu():
-    # Limpiar el frame de cualquier contenido previo
     for widget in frame.winfo_children():
         widget.destroy()
 
@@ -110,7 +103,6 @@ def actualizar_menu():
     import_button.pack(pady=10)
     import_button.config(highlightbackground="#5d6d7e", highlightthickness=2)
 
-    # Cambiar color al pasar el ratón (hover) a un gris más oscuro, sin blanco
     for button in frame.winfo_children():
         if isinstance(button, tk.Button):
             button.config(activebackground="#4b5d6b", activeforeground="white")

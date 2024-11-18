@@ -1,125 +1,144 @@
 import dearpygui.dearpygui as dpg
 import networkx as nx
 import pandas as pd
-import random
+import heapq
 
-# Variables globales
 key_node = None
 subgraph_nodes = set()
 node_ids = {}
 node_positions = {}
-key_nodes = []  
-current_index = 0 
-# Cargar el grafo desde un archivo CSV
+key_nodes = []
+current_index = 0
+G = None
+
 def load_graph_from_custom_csv(file_path):
+    global G
     try:
-        df = pd.read_csv(file_path, index_col=0, header=None, on_bad_lines='skip')
+        df = pd.read_csv(file_path, header=None, index_col=False, on_bad_lines='skip')
     except Exception as e:
         print(f"Error al leer el archivo CSV: {e}")
         return None
 
     G = nx.Graph()
-    for node, connections in df.iterrows():
-        for target in connections.dropna():
+    for _, row in df.iterrows():
+        node = int(row[0])
+        connections = row[1:].dropna()
+        for target in connections:
             try:
-                G.add_edge(int(node), int(target), weight=random.random())
+                target = int(target)
+                G.add_edge(node, target)
             except ValueError:
                 print(f"Advertencia: Nodo inválido '{target}' en fila {node}, ignorando esta conexión.")
     return G
 
-# Algoritmo para encontrar el primer nodo clave (usando Dijkstra, por ejemplo)
-def find_key_node(G):
-    global key_node, subgraph_nodes, key_nodes
-    # Usamos el grado de los nodos para determinar el nodo clave (o Dijkstra o alguna heurística similar)
-    node_degrees = dict(G.degree())  # Calcular el grado de todos los nodos
-    key_node = max(node_degrees, key=node_degrees.get)  # Nodo con el mayor grado
-    subgraph_nodes = set(G.neighbors(key_node))
-    key_nodes = [key_node]
+# Función para encontrar los nodos clave en el grafo segun el grado de conexión
+def find_key_nodes(G, top_n=250):
+    global key_nodes
+    if G is not None and isinstance(G, nx.Graph):
+        key_nodes = sorted(G.nodes, key=lambda node: len(list(G.neighbors(node))), reverse=True)[:top_n]
+        if key_nodes:
+            print(f"Nodos clave encontrados: {key_nodes}")
+        else:
+            print("No se encontraron nodos clave.")
 
-# Dibujar el grafo completo con todos los nodos y agregar bordes a los nodos
-def draw_full_graph(G):
-    dpg.delete_item("canvas", children_only=True)
-    offset_x, offset_y = 600, 400  # Desplazar el grafo a la izquierda
+def draw_subgraph(G, local_subgraph_nodes, key_node, canvas_tag):
+    global node_positions
+    if key_node is None or key_node not in node_positions:
+        return
+    if not dpg.does_item_exist(canvas_tag):
+        return
+    dpg.delete_item(canvas_tag, children_only=True)
 
-    # Primero, dibujamos todas las aristas
+    subgraph = G.subgraph([key_node] + local_subgraph_nodes)
+    subgraph_layout = nx.spring_layout(subgraph, k=1.0, scale=1.0)  
+    subgraph_positions = {node: (x * 300, y * 300) for node, (x, y) in subgraph_layout.items()}  #
+
+    # Dibujar nodo clave (nodo azul)
+    key_node_x, key_node_y = subgraph_positions[key_node]
+    offset_x, offset_y = 600, 400
+    dpg.draw_circle((key_node_x + offset_x, key_node_y + offset_y), 12, color=(255, 255, 255), fill=(0, 0, 255), parent=canvas_tag)
+    dpg.draw_text((key_node_x + offset_x + 14, key_node_y + offset_y - 12), str(key_node), color=(255, 255, 255), parent=canvas_tag, size=16)
+
+    # Dibujar los vecinos y conexiones del nodo clave
+    for neighbor in local_subgraph_nodes:
+        x, y = subgraph_positions[neighbor]
+        dpg.draw_circle((x + offset_x, y + offset_y), 12, color=(255, 255, 255), fill=(255, 255, 255), parent=canvas_tag)
+        dpg.draw_text((x + offset_x + 14, y + offset_y - 12), str(neighbor), color=(255, 255, 255), parent=canvas_tag, size=16)
+        dpg.draw_line((key_node_x + offset_x, key_node_y + offset_y), (x + offset_x, y + offset_y), color=(150, 150, 150), parent=canvas_tag)
+
+def draw_full_graph(G, canvas_tag, node_info):
+    global node_positions
+    if G is None:
+        return
+    if not dpg.does_item_exist(canvas_tag):
+        return
+    dpg.delete_item(canvas_tag, children_only=True)
+
+    layout = nx.spring_layout(G, k=0.3, scale=0.8)
+    node_positions = {node: (x * 300, y * 300) for node, (x, y) in layout.items()}
+
+    offset_x, offset_y = 600, 400  
+
+    # Dibujar las aristas (líneas entre nodos)
     for edge in G.edges:
         x1, y1 = node_positions[edge[0]]
         x2, y2 = node_positions[edge[1]]
-        dpg.draw_line((x1 + offset_x, y1 + offset_y), (x2 + offset_x, y2 + offset_y), color=(250, 250, 250), parent="canvas")
+        dpg.draw_line((x1 + offset_x, y1 + offset_y), (x2 + offset_x, y2 + offset_y), color=(255, 255, 255), parent=canvas_tag)
 
-    # Identificar los nodos clave dinámicamente (por ejemplo, con el grado más alto)
-    global key_nodes
-    key_nodes = [node for node in G.nodes if G.degree(node) > 5]  # Filtramos nodos con grado mayor a 5
-
-    # Luego, dibujamos todos los nodos en verde y los nodos clave en azul, con borde
+    # Dibujar los nodos
     for node in G.nodes:
         x, y = node_positions[node]
+        color = (60, 219, 65)  # Verde para nodos no clave
         if node in key_nodes:
-            color = (0, 0, 255)  # Nodo clave en azul
-            border_color = (250, 250, 250)  # Borde blanco
-        else:
-            color = (60, 219, 65)
-            border_color =  (250, 250, 250)  # Borde negro
+            color = (0, 0, 255)  # Azul para nodos clave
 
-        dpg.draw_circle((x + offset_x, y + offset_y), 12, color=border_color, fill=color, parent="canvas")  # Nodo con borde
+        border_color = (255, 255, 255)  # Borde blanco para todos los nodos
 
-    # Dibujar el nodo clave por encima de todos los nodos y aristas
-    key_node_x, key_node_y = node_positions[key_node]
-    dpg.draw_circle((key_node_x + offset_x, key_node_y + offset_y), 15, color=(0, 0, 255), fill=(255, 255, 255), parent="canvas")
-    dpg.draw_text((key_node_x + offset_x + 10, key_node_y + offset_y - 10), str(key_node), color=(0, 0, 0), parent="canvas")
+        dpg.draw_circle((x + offset_x, y + offset_y), 12, color=border_color, parent=canvas_tag)
+        dpg.draw_circle((x + offset_x, y + offset_y), 10, color=color, parent=canvas_tag, fill=color)
 
-# Dibujar solo el subgrafo del nodo clave (nodo clave y sus vecinos)
-def draw_subgraph(G):
-    dpg.delete_item("canvas", children_only=True)  # Eliminar el contenido previo en el canvas
-    offset_x, offset_y = 600, 400  # Desplazar el grafo a la izquierda
+    # Actualizar el mensaje con la cantidad de nodos clave identificados
+    dpg.set_value(node_info, f"La cantidad de nodos clave identificados en el grafo es: {len(key_nodes)}")
 
-    # Dibujar el nodo clave por encima de todo
-    key_node_x, key_node_y = node_positions[key_node]
-    dpg.draw_circle((key_node_x + offset_x, key_node_y + offset_y), 15, color=(0, 0, 255), fill=(255, 255, 255), parent="canvas")
-    dpg.draw_text((key_node_x + offset_x + 10, key_node_y + offset_y - 10), str(key_node), color=(0, 0, 0), parent="canvas")
+def next_node(G, canvas_tag, node_info):
+    global current_index, key_node
+    if key_nodes:
+        current_index = (current_index + 1) % len(key_nodes)
+        key_node = key_nodes[current_index]
+        draw_subgraph(G, list(G.neighbors(key_node)), key_node, canvas_tag)
+        num_connections = len(list(G.neighbors(key_node)))
+        dpg.set_value(node_info, f"El nodo clave actual es {key_node} y tiene {num_connections} conexiones.")
 
-    # Dibujar los vecinos del nodo clave (en blanco)
-    for neighbor in subgraph_nodes:
-        x, y = node_positions[neighbor]
-        dpg.draw_circle((x + offset_x, y + offset_y), 12, color=(0, 0, 0), fill=(255, 255, 255), parent="canvas")  # Vecinos en blanco
-        dpg.draw_text((x + offset_x + 10, y + offset_y - 10), str(neighbor), color=(255, 255, 255), parent="canvas")
-
-        # Dibujar las aristas entre el nodo clave y sus vecinos
-        x1, y1 = node_positions[key_node]
-        x2, y2 = node_positions[neighbor]
-        dpg.draw_line((x1 + offset_x, y1 + offset_y), (x2 + offset_x, y2 + offset_y), color=(200, 200, 200), parent="canvas")
-
-# Función para pasar al siguiente nodo clave
-def next_node(G):
-    global current_index
-    if len(key_nodes) > 1:  # Solo continuar si hay más de un nodo clave
-        current_index = (current_index + 1) % len(key_nodes)  # Avanzar al siguiente nodo clave
-        find_key_node(G)  # Actualizar el nodo clave y sus vecinos
-        draw_subgraph(G)  # Dibujar el nuevo subgrafo del nodo clave
-
-# Ejecutar DearPyGUI
 def run_dearpygui():
+    global G, node_positions, key_node
     dpg.create_context()
     G = load_graph_from_custom_csv('output/data/facebook_connections.csv')
 
-    # Calcular posiciones para el grafo y dibujar el primer subgrafo
-    global node_positions
-    layout = nx.spring_layout(G, k=0.25, scale=1.0)
-    node_positions = {node: (x * 300, y * 300) for node, (x, y) in layout.items()}
+    if G is not None:
+        layout = nx.spring_layout(G, k=0.3, scale=1.5)
+        node_positions = {node: (x * 400, y * 400) for node, (x, y) in layout.items()}
 
+        find_key_nodes(G)
+        if key_nodes:
+            key_node = key_nodes[0]
+            canvas_tag = "canvas"
+            with dpg.window(label="Información del Nodo", width=300, height=100):
+                node_info = dpg.add_text(f"El nodo clave actual es {key_node} y tiene {len(list(G.neighbors(key_node)))} conexiones.")
+            
+            draw_subgraph(G, list(G.neighbors(key_node)), key_node, canvas_tag)
+    
     with dpg.handler_registry():
-        with dpg.window(label="Simulación de Nodos Claves", width=1400, height=900):  # Ajuste en el tamaño de la ventana
-            # Crear los botones en la parte superior y configurar el canvas
+        with dpg.window(label="Simulación de Nodos Claves", width=1400, height=900):
             with dpg.group(horizontal=True):
-                dpg.add_button(label="Siguiente Nodo", callback=lambda: next_node(G))
-                dpg.add_button(label="Identificar Todos los Nodos Clave", callback=lambda: draw_full_graph(G))
+                dpg.add_button(label="Siguiente Nodo", callback=lambda: next_node(G, "canvas", node_info))
+                dpg.add_button(label="Identificar Todos los Nodos Clave", callback=lambda: draw_full_graph(G, "canvas", node_info))
+            with dpg.group(horizontal=True):
+                node_info = dpg.add_text(f"El nodo clave actual es {key_node} y tiene {len(list(G.neighbors(key_node)))} conexiones.")
+            with dpg.drawlist(width=1400, height=850, tag="canvas"):
+                if key_nodes:
+                    draw_subgraph(G, list(G.neighbors(key_node)), key_node, "canvas")
 
-            # Crear el canvas para el grafo
-            with dpg.drawlist(width=1400, height=850, tag="canvas"):  # Ajuste en el tamaño del canvas (más alto)
-                find_key_node(G)  # Encontrar el primer nodo clave y sus vecinos
-                draw_subgraph(G)  # Dibujar el primer subgrafo
-
-    dpg.create_viewport(title='Nodo Clave Simulador', width=1400, height=900)  # Ajuste de la ventana para mejor visibilidad
+    dpg.create_viewport(title='Nodo Clave Simulador', width=1400, height=900)
     dpg.setup_dearpygui()
     dpg.show_viewport()
     dpg.start_dearpygui()

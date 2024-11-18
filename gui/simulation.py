@@ -10,20 +10,23 @@ node_ids = {}
 node_positions = {}
 
 def load_graph_from_custom_csv(file_path):
+    global G
     try:
-        df = pd.read_csv(file_path, index_col=0, header=None, on_bad_lines='skip')
+        df = pd.read_csv(file_path, header=None, index_col=False, on_bad_lines='skip')
     except Exception as e:
         print(f"Error al leer el archivo CSV: {e}")
         return None
 
     G = nx.Graph()
-    for node, connections in df.iterrows():
-        for target in connections.dropna():
+    for _, row in df.iterrows():
+        node = int(row[0])
+        connections = row[1:].dropna()
+        for target in connections:
             try:
-                G.add_edge(int(node), int(target), weight=random.random())
+                target = int(target)
+                G.add_edge(node, target)
             except ValueError:
                 print(f"Advertencia: Nodo inválido '{target}' en fila {node}, ignorando esta conexión.")
-    
     return G
 
 def draw_graph(G):
@@ -31,23 +34,23 @@ def draw_graph(G):
     global node_positions
     node_positions = {node: (x * 300, y * 300) for node, (x, y) in layout.items()}
 
-    offset_x, offset_y = 600, 400  # Ajuste de posición (horizontal, vertical)
+    offset_x, offset_y = 600, 400 
 
-    # Dibuja las aristas
+    # Dibujar las aristas
     for edge in G.edges:
         x1, y1 = node_positions[edge[0]]
         x2, y2 = node_positions[edge[1]]
         dpg.draw_line((x1 + offset_x, y1 + offset_y), (x2 + offset_x, y2 + offset_y), color=(250, 250, 250), parent="canvas")
 
-    # Dibuja los nodos con borde
+    # Dibujar los nodos
     for node in G.nodes:
         x, y = node_positions[node]
         color = (60, 219, 65)
-        border_color = (250, 250, 250)  # Color del borde (igual que las aristas)
+        border_color = (250, 250, 250)  
         
-        # Dibuja el borde primero (un círculo más grande)
+      
         dpg.draw_circle((x + offset_x, y + offset_y), 12, color=border_color, parent="canvas")
-        # Dibuja el nodo relleno
+
         node_id = dpg.draw_circle((x + offset_x, y + offset_y), 10, color=color, parent="canvas", fill=color)
         node_ids[node] = node_id
 
@@ -56,14 +59,13 @@ def update_infected_nodes(G):
         x, y = node_positions[node]
         if node in node_ids:
             dpg.delete_item(node_ids[node])
-            # Dibuja el nodo infectado con borde
             node_ids[node] = dpg.draw_circle((x + 600, y + 400), 12, color=(150, 150, 150), parent="canvas")  # Borde
             node_ids[node] = dpg.draw_circle((x + 600, y + 400), 10, color=(190, 25, 25), parent="canvas", fill=(190, 25, 25))  # Nodo infectado
 
     dpg.set_value("infected_count", f"Nodos infectados: {len(infected_nodes)}")
     dpg.set_value("healthy_count", f"Nodos sanos: {len(G.nodes) - len(infected_nodes)}")
 
-
+# Funcion de propagación de infección basado en el algoritmo BFS
 def propagate_infection(G):
     new_infected = set()
     nodes_to_infect = deque(infected_nodes)
@@ -104,7 +106,6 @@ def run_dearpygui():
         dpg.add_button(label="Iniciar Simulación", callback=lambda: start_simulation(G))
         dpg.add_spacer(height=10)
         
-        # Canvas para el grafo, ocupando el espacio completo a la derecha
         dpg.add_drawlist(width=1000, height=900, tag="canvas")
 
     dpg.create_viewport(title='Virus Simulator', width=1200, height=800)
@@ -113,7 +114,7 @@ def run_dearpygui():
 
     global G
     G = load_graph_from_custom_csv('output/data/facebook_connections.csv')
-    draw_graph(G)  # Dibuja el grafo al abrir la ventana
+    draw_graph(G)  
 
     dpg.start_dearpygui()
     dpg.destroy_context()
