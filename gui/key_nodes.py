@@ -1,7 +1,6 @@
 import dearpygui.dearpygui as dpg
 import networkx as nx
 import pandas as pd
-import heapq
 
 key_node = None
 subgraph_nodes = set()
