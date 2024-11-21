@@ -48,22 +48,40 @@ def draw_subgraph(G, local_subgraph_nodes, key_node, canvas_tag):
         return
     dpg.delete_item(canvas_tag, children_only=True)
 
-    subgraph = G.subgraph([key_node] + local_subgraph_nodes)
-    subgraph_layout = nx.spring_layout(subgraph, k=1.0, scale=1.0)  
-    subgraph_positions = {node: (x * 300, y * 300) for node, (x, y) in subgraph_layout.items()}  #
+
+    subgraph = G.subgraph([key_node] + list(local_subgraph_nodes)).copy()  
+    subgraph_layout = nx.spring_layout(subgraph, k=0.2, scale=1.5)  
+    subgraph_positions = {node: (x * 250, y * 250) for node, (x, y) in subgraph_layout.items()}  #
+
+    offset_x, offset_y = 600, 400
 
     # Dibujar nodo clave (nodo azul)
     key_node_x, key_node_y = subgraph_positions[key_node]
-    offset_x, offset_y = 600, 400
-    dpg.draw_circle((key_node_x + offset_x, key_node_y + offset_y), 12, color=(255, 255, 255), fill=(0, 0, 255), parent=canvas_tag)
-    dpg.draw_text((key_node_x + offset_x + 14, key_node_y + offset_y - 12), str(key_node), color=(255, 255, 255), parent=canvas_tag, size=16)
+    dpg.draw_circle((key_node_x + offset_x, key_node_y + offset_y), 10, color=(255, 255, 255), fill=(0, 0, 255), parent=canvas_tag)
+    dpg.draw_text((key_node_x + offset_x + 12, key_node_y + offset_y - 12), str(key_node), color=(255, 255, 255), parent=canvas_tag, size=14)
 
     # Dibujar los vecinos y conexiones del nodo clave
     for neighbor in local_subgraph_nodes:
-        x, y = subgraph_positions[neighbor]
-        dpg.draw_circle((x + offset_x, y + offset_y), 12, color=(255, 255, 255), fill=(255, 255, 255), parent=canvas_tag)
-        dpg.draw_text((x + offset_x + 14, y + offset_y - 12), str(neighbor), color=(255, 255, 255), parent=canvas_tag, size=16)
-        dpg.draw_line((key_node_x + offset_x, key_node_y + offset_y), (x + offset_x, y + offset_y), color=(150, 150, 150), parent=canvas_tag)
+        # Verificar si el vecino está en el subgrafo antes de dibujar
+        if neighbor in subgraph_positions:
+            x, y = subgraph_positions[neighbor]
+            dpg.draw_circle((x + offset_x, y + offset_y), 10, color=(255, 255, 255), fill=(255, 255, 255), parent=canvas_tag)
+            dpg.draw_text((x + offset_x + 12, y + offset_y - 12), str(neighbor), color=(255, 255, 255), parent=canvas_tag, size=14)
+            
+            # Verificar si ambos nodos están conectados antes de dibujar la línea
+            if subgraph.has_edge(key_node, neighbor):  # Usamos .has_edge() para verificar si hay una conexión
+                key_node_x, key_node_y = subgraph_positions[key_node]
+                neighbor_x, neighbor_y = subgraph_positions[neighbor]
+
+                # Dibujar línea de conexión solo si ambos nodos están conectados
+                dpg.draw_line(
+                    (key_node_x + offset_x, key_node_y + offset_y),
+                    (neighbor_x + offset_x, neighbor_y + offset_y),
+                    color=(150, 150, 150), parent=canvas_tag
+                )
+            else:
+                print(f"No hay conexión entre {key_node} y {neighbor}")
+
 
 def draw_full_graph(G, canvas_tag, node_info):
     global node_positions
@@ -73,8 +91,8 @@ def draw_full_graph(G, canvas_tag, node_info):
         return
     dpg.delete_item(canvas_tag, children_only=True)
 
-    layout = nx.spring_layout(G, k=0.3, scale=0.8)
-    node_positions = {node: (x * 300, y * 300) for node, (x, y) in layout.items()}
+    layout = nx.spring_layout(G, k=0.2, scale=1.5)  # Ajustar k para aumentar separación de los nodos
+    node_positions = {node: (x * 250, y * 250) for node, (x, y) in layout.items()}
 
     offset_x, offset_y = 600, 400  
 
@@ -87,17 +105,18 @@ def draw_full_graph(G, canvas_tag, node_info):
     # Dibujar los nodos
     for node in G.nodes:
         x, y = node_positions[node]
-        color = (60, 219, 65)  # Verde para nodos no clave
+        color = (60, 219, 65)  
         if node in key_nodes:
             color = (0, 0, 255)  # Azul para nodos clave
 
         border_color = (255, 255, 255)  # Borde blanco para todos los nodos
 
-        dpg.draw_circle((x + offset_x, y + offset_y), 12, color=border_color, parent=canvas_tag)
-        dpg.draw_circle((x + offset_x, y + offset_y), 10, color=color, parent=canvas_tag, fill=color)
+        dpg.draw_circle((x + offset_x, y + offset_y), 10, color=border_color, parent=canvas_tag)  
+        dpg.draw_circle((x + offset_x, y + offset_y), 8, color=color, parent=canvas_tag, fill=color)  
 
     # Actualizar el mensaje con la cantidad de nodos clave identificados
     dpg.set_value(node_info, f"La cantidad de nodos clave identificados en el grafo es: {len(key_nodes)}")
+
 
 def next_node(G, canvas_tag, node_info):
     global current_index, key_node

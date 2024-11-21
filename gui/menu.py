@@ -7,10 +7,11 @@ from PIL import Image, ImageTk
 from gui.import_func import importar_csv
 from gui.simulation import run_dearpygui as run_dearpygui_sim
 from gui.key_nodes import run_dearpygui as run_dearpygui_key_nodes
+from gui.simulation import load_graph_from_custom_csv
 from gui.reports import VirusSimulationReport
 
 # Crear el grafo G para pasar a VirusSimulationReport
-G = nx.erdos_renyi_graph(50, 0.1)  # Esto es un ejemplo; ajusta el grafo según tu simulación
+G = load_graph_from_custom_csv("output/data/facebook_connections.csv")
 report_instance = VirusSimulationReport(G)
 
 # Función para ejecutar la simulación a través de DearPyGUI en un hilo separado
@@ -28,7 +29,6 @@ def ver_grafo():
 # Función para generar reportes
 def generar_reportes():
     report_instance.start_simulation()  # Inicia la simulación antes de generar el reporte
-    report_instance.generate_csv_report("virus_propagation_report.csv")
     report_instance.generate_pdf_report("virus_propagation_report.pdf")
     messagebox.showinfo("Reportes Generados", "El reporte CSV y PDF se han guardado correctamente.")
 
@@ -73,23 +73,45 @@ def crear_menu():
 
 # Actualizar el menú principal
 def actualizar_menu():
+    def on_enter(event, button):
+        button.config(bg="#4b5d6b", fg="white")  
+
+    def on_leave(event, button):
+        button.config(bg="#5d6d7e", fg="white")  
+
     for widget in frame.winfo_children():
         widget.destroy()
 
-    title_label = tk.Label(frame, text="Virus Simulator", font=("Segoe UI", 24, "bold"), fg="#ecf0f1", bg="#34495e")
+    title_label = tk.Label(frame, text="Virus Prop. Simulator", font=("Segoe UI", 24, "bold"), fg="#ecf0f1", bg="#34495e")
     title_label.pack(pady=20)
 
-    start_button = tk.Button(frame, text="Iniciar Simulación", width=25, height=2, bg="#5d6d7e", fg="white", font=("Segoe UI", 12), relief="flat", bd=2, command=iniciar_simulacion)
-    start_button.pack(pady=10)
 
-    graph_button = tk.Button(frame, text="Nodos clave", width=25, height=2, bg="#5d6d7e", fg="white", font=("Segoe UI", 12), relief="flat", bd=2, command=ver_grafo)
-    graph_button.pack(pady=10)
+    buttons = [
+        ("Iniciar Simulación", iniciar_simulacion),
+        ("Nodos clave", ver_grafo),
+        ("Generar Reportes", generar_reportes),
+        ("Importar CSV", importar_csv_opcion),
+    ]
 
-    report_button = tk.Button(frame, text="Generar Reportes", width=25, height=2, bg="#5d6d7e", fg="white", font=("Segoe UI", 12), relief="flat", bd=2, command=generar_reportes)
-    report_button.pack(pady=10)
 
-    import_button = tk.Button(frame, text="Importar CSV", width=25, height=2, bg="#5d6d7e", fg="white", font=("Segoe UI", 12), relief="flat", bd=2, command=importar_csv_opcion)
-    import_button.pack(pady=10)
+    for text, command in buttons:
+        button = tk.Button(
+            frame,
+            text=text,
+            width=25,
+            height=2,
+            bg="#5d6d7e",
+            fg="white",
+            font=("Segoe UI", 12),
+            relief="flat",
+            bd=2,
+            command=command
+        )
+        button.pack(pady=10)
+
+        button.bind("<Enter>", lambda event, b=button: on_enter(event, b))
+        button.bind("<Leave>", lambda event, b=button: on_leave(event, b))
+
 
 # Función para volver al menú principal
 def volver_al_menu_principal():

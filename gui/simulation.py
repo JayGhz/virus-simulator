@@ -49,9 +49,9 @@ def draw_graph(G):
         border_color = (250, 250, 250)  
         
       
-        dpg.draw_circle((x + offset_x, y + offset_y), 12, color=border_color, parent="canvas")
+        dpg.draw_circle((x + offset_x, y + offset_y), 10, color=border_color, parent="canvas")
 
-        node_id = dpg.draw_circle((x + offset_x, y + offset_y), 10, color=color, parent="canvas", fill=color)
+        node_id = dpg.draw_circle((x + offset_x, y + offset_y), 8, color=color, parent="canvas", fill=color)
         node_ids[node] = node_id
 
 def update_infected_nodes(G):
@@ -59,8 +59,8 @@ def update_infected_nodes(G):
         x, y = node_positions[node]
         if node in node_ids:
             dpg.delete_item(node_ids[node])
-            node_ids[node] = dpg.draw_circle((x + 600, y + 400), 12, color=(150, 150, 150), parent="canvas")  # Borde
-            node_ids[node] = dpg.draw_circle((x + 600, y + 400), 10, color=(190, 25, 25), parent="canvas", fill=(190, 25, 25))  # Nodo infectado
+            node_ids[node] = dpg.draw_circle((x + 600, y + 400), 10, color=(150, 150, 150), parent="canvas")  # Borde
+            node_ids[node] = dpg.draw_circle((x + 600, y + 400), 8, color=(190, 25, 25), parent="canvas", fill=(190, 25, 25))  # Nodo infectado
 
     dpg.set_value("infected_count", f"Nodos infectados: {len(infected_nodes)}")
     dpg.set_value("healthy_count", f"Nodos sanos: {len(G.nodes) - len(infected_nodes)}")
@@ -69,7 +69,7 @@ def update_infected_nodes(G):
 def propagate_infection(G):
     new_infected = set()
     nodes_to_infect = deque(infected_nodes)
-    min_probability = 0.1
+    min_probability = 0.05
 
     while nodes_to_infect:
         node = nodes_to_infect.popleft()
@@ -101,8 +101,8 @@ def run_dearpygui():
     dpg.create_context()
 
     with dpg.window(label="Simulación de Propagación de Virus", width=1200, height=800):
+        dpg.add_text("Nodos sanos: 2226", tag="healthy_count")
         dpg.add_text("Nodos infectados: 0", tag="infected_count")
-        dpg.add_text("Nodos sanos: 4000", tag="healthy_count")
         dpg.add_button(label="Iniciar Simulación", callback=lambda: start_simulation(G))
         dpg.add_spacer(height=10)
         
