@@ -1,7 +1,7 @@
 # class UnionFind:
 #     def __init__(self, n):
 #         self.parent = list(range(n))  # Asegúrate de que 'n' sea el número correcto de nodos
-#         self.rank = [0] * n  
+#         self.rank = [0] * n
 #     def find(self, x):
 #         if self.parent[x] != x:
 #             self.parent[x] = self.find(self.parent[x])  # Compresión de caminos
@@ -57,7 +57,7 @@
 #             if node not in visited:
 #                 if max_node is None or distances[node] > distances[max_node]:
 #                     max_node = node
-        
+
 #         if distances[max_node] == float('-inf'):
 #             break
 
@@ -80,7 +80,6 @@
 #     path.reverse()
 
 #     return distances[end], path
-
 
 
 # # DJS Algorithm (Find connected components)
@@ -113,14 +112,14 @@
 
 # def betweenness_centrality(nodes, edges):
 #     centrality = {node: 0 for node in nodes}
-    
+
 #     for s in nodes:
 #         for t in nodes:
 #             if s != t:
 #                 # Run Dijkstra to find shortest paths from s to t
 #                 dist, path = dijkstra_algorithm(nodes, edges, s, t)
-                
-#                 for node in path[1:-1]:  
+
+#                 for node in path[1:-1]:
 #                     centrality[node] += 1 / dist
 
 #     return centrality
@@ -128,6 +127,6 @@
 # def largest_connected_component(nodes, edges):
 #     # Obtenemos las componentes conectadas utilizando djs_algorithm
 #     components = djs_algorithm(nodes, edges)
-    
+
 #     # 'components' es ahora una lista de nodos, no un diccionario
 #     return components  # Esta es la componente más grande, ya que max() lo garantizó
